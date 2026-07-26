@@ -102,132 +102,120 @@
 <body>
 
 <header>
-  <h1>🌐 AG Traductor Call Center</h1>
-  <p>Traducción de voz en tiempo real Inglés ⇄ Español</p>
+  <h1>AG Traductor Call Center</h1>
+  <p>Traduccion de voz en tiempo real Ingles - Espanol</p>
 </header>
 
 <div class="container">
-  <!-- Panel Inglés -->
   <div class="panel english">
-    <h2>🇺🇸 Habla en Inglés</h2>
-    <button class="mic-btn" id="btnEN">🎤 Mantener presionado para hablar</button>
+    <h2>Habla en Ingles</h2>
+    <button class="mic-btn" id="btnEN">Mantener presionado para hablar</button>
     <div class="box">
       <span class="label">Texto original (EN)</span>
       <div id="textEN">Esperando audio...</div>
     </div>
     <div class="box">
-      <span class="label">Traducción (ES)</span>
-      <div id="translatedES">—</div>
+      <span class="label">Traduccion (ES)</span>
+      <div id="translatedES">-</div>
     </div>
     <div class="status" id="statusEN"></div>
   </div>
 
-  <!-- Panel Español -->
   <div class="panel spanish">
-    <h2>🇪🇸 Habla en Español</h2>
-    <button class="mic-btn" id="btnES">🎤 Mantener presionado para hablar</button>
+    <h2>Habla en Espanol</h2>
+    <button class="mic-btn" id="btnES">Mantener presionado para hablar</button>
     <div class="box">
       <span class="label">Texto original (ES)</span>
       <div id="textES">Esperando audio...</div>
     </div>
     <div class="box">
-      <span class="label">Traducción (EN)</span>
-      <div id="translatedEN">—</div>
+      <span class="label">Traduccion (EN)</span>
+      <div id="translatedEN">-</div>
     </div>
     <div class="status" id="statusES"></div>
   </div>
 </div>
 
-<p class="footer-note">AG Robotics · Prototipo MVP · Requiere Chrome/Edge en desktop o Android</p>
+<p class="footer-note">AG Robotics - Prototipo MVP - Requiere Chrome/Edge en desktop o Android</p>
 
 <script>
-// ---------- Verificación de soporte ----------
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (!SpeechRecognition) {
   alert("Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.");
 }
 
-// ---------- Función de traducción (MyMemory API, gratuita, sin key) ----------
-async function traducir(texto, origen, destino) {
-  const url = https://api.mymemory.translated.net/get?q=${encodeURIComponent(texto)}&langpair=${origen}|${destino};
-  try {
-    const res = await fetch(url);
-    const data = await res.json();
-    return data.responseData.translatedText;
-  } catch (err) {
-    console.error("Error de traducción:", err);
-    return "[Error al traducir]";
-  }
+function traducir(texto, origen, destino) {
+  var url = "https://api.mymemory.translated.net/get?q=" + encodeURIComponent(texto) + "&langpair=" + origen + "|" + destino;
+  return fetch(url)
+    .then(function(res) { return res.json(); })
+    .then(function(data) { return data.responseData.translatedText; })
+    .catch(function(err) {
+      console.error("Error de traduccion:", err);
+      return "[Error al traducir]";
+    });
 }
 
-// ---------- Función de voz (Text-to-Speech) ----------
 function hablar(texto, lang) {
-  const utter = new SpeechSynthesisUtterance(texto);
+  var utter = new SpeechSynthesisUtterance(texto);
   utter.lang = lang;
   utter.rate = 1;
   speechSynthesis.speak(utter);
 }
 
-// ---------- Configurar un panel (EN o ES) ----------
-function configurarPanel(btnId, statusId, textOutId, translatedOutId, sttLang, targetLangCode, ttsTargetLang) {
-  const btn = document.getElementById(btnId);
-  const status = document.getElementById(statusId);
-  const textOut = document.getElementById(textOutId);
-  const translatedOut = document.getElementById(translatedOutId);
+function configurarPanel(btnId, statusId, textOutId, translatedOutId, sttLang, origenLang, destinoLang, ttsTargetLang) {
+  var btn = document.getElementById(btnId);
+  var status = document.getElementById(statusId);
+  var textOut = document.getElementById(textOutId);
+  var translatedOut = document.getElementById(translatedOutId);
 
-  const recognition = new SpeechRecognition();
+  var recognition = new SpeechRecognition();
   recognition.lang = sttLang;
   recognition.continuous = false;
   recognition.interimResults = false;
 
-  let listening = false;
+  var listening = false;
 
-  btn.addEventListener('click', () => {
+  btn.addEventListener('click', function() {
     if (!listening) {
       recognition.start();
       listening = true;
       btn.classList.add('listening');
-      btn.textContent = '🔴 Escuchando... (click para detener)';
+      btn.textContent = 'Escuchando... (click para detener)';
       status.textContent = 'Escuchando...';
     } else {
       recognition.stop();
     }
   });
 
-  recognition.onresult = async (event) => {
-    const transcript = event.results[0][0].transcript;
+  recognition.onresult = function(event) {
+    var transcript = event.results[0][0].transcript;
     textOut.textContent = transcript;
     status.textContent = 'Traduciendo...';
 
-    const traduccion = await traducir(transcript, targetLangCode.origen, targetLangCode.destino);
-    translatedOut.textContent = traduccion;
-    status.textContent = 'Reproduciendo traducción...';
-
-    hablar(traduccion, ttsTargetLang);
-
-    status.textContent = 'Listo. Presiona para hablar de nuevo.';
+    traducir(transcript, origenLang, destinoLang).then(function(traduccion) {
+      translatedOut.textContent = traduccion;
+      status.textContent = 'Reproduciendo traduccion...';
+      hablar(traduccion, ttsTargetLang);
+      status.textContent = 'Listo. Presiona para hablar de nuevo.';
+    });
   };
 
-  recognition.onend = () => {
+  recognition.onend = function() {
     listening = false;
     btn.classList.remove('listening');
-    btn.textContent = '🎤 Mantener presionado para hablar';
+    btn.textContent = 'Mantener presionado para hablar';
   };
 
-  recognition.onerror = (event) => {
+  recognition.onerror = function(event) {
     status.textContent = 'Error: ' + event.error;
     listening = false;
     btn.classList.remove('listening');
-    btn.textContent = '🎤 Mantener presionado para hablar';
+    btn.textContent = 'Mantener presionado para hablar';
   };
 }
 
-// ---------- Inicializar ambos paneles ----------
-// Panel Inglés: escucha en inglés, traduce a español, habla en español
-configurarPanel('btnEN', 'statusEN', 'textEN', 'translatedES', 'en-US', {origen: 'en', destino: 'es'}, 'es-ES');
-
-// Panel Español: escucha en español, traduce a inglés, habla en inglés
-configurarPanel('btnES', 'statusES', 'textES', 'translatedEN', 'es-ES', {origen: 'es', destino: 'en'}, 'en-US');
+configurarPanel('btnEN', 'statusEN', 'textEN', 'translatedES', 'en-US', 'en', 'es', 'es-ES');
+configurarPanel('btnES', 'statusES', 'textES', 'translatedEN', 'es-ES', 'es', 'en', 'en-US');
 </script>
 
 </body>
