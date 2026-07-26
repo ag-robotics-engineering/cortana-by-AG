@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AG Traductor - Call Center en Tiempo Real</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Arial, sans-serif; }
+  body {
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    color: #f1f5f9;
+    min-height: 100vh;
+    padding: 20px;
+  }
+  header {
+    text-align: center;
+    margin-bottom: 30px;
+  }
+  header h1 {
+    font-size: 1.8rem;
+    background: linear-gradient(90deg, #38bdf8, #818cf8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  header p { color: #94a3b8; margin-top: 5px; }
+  .container {
+    display: flex;
+    gap: 20px;
+    max-width: 1100px;
+    margin: 0 auto;
+    flex-wrap: wrap;
+  }
+  .panel {
+    flex: 1;
+    min-width: 320px;
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 16px;
+    padding: 20px;
+  }
+  .panel h2 {
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+    color: #38bdf8;
+  }
+  .panel.spanish h2 { color: #818cf8; }
+  .mic-btn {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: #38bdf8;
+    color: #0f172a;
+    transition: 0.2s;
+    margin-bottom: 15px;
+  }
+  .panel.spanish .mic-btn { background: #818cf8; }
+  .mic-btn:hover { filter: brightness(1.1); }
+  .mic-btn.listening {
+    background: #ef4444;
+    color: white;
+    animation: pulse 1.2s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
+    70% { box-shadow: 0 0 0 12px rgba(239,68,68,0); }
+    100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+  }
+  .box {
+    background: #0f172a;
+    border-radius: 10px;
+    padding: 12px;
+    min-height: 70px;
+    margin-bottom: 12px;
+    font-size: 0.95rem;
+    border: 1px solid #334155;
+  }
+  .box .label {
+    font-size: 0.75rem;
+    color: #64748b;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    display: block;
+  }
+  .status {
+    text-align: center;
+    color: #64748b;
+    font-size: 0.85rem;
+    margin-top: 10px;
+  }
+  .footer-note {
+    text-align: center;
+    margin-top: 25px;
+    color: #475569;
+    font-size: 0.8rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🌐 AG Traductor Call Center</h1>
+  <p>Traducción de voz en tiempo real Inglés ⇄ Español</p>
+</header>
+
+<div class="container">
+  <!-- Panel Inglés -->
+  <div class="panel english">
+    <h2>🇺🇸 Habla en Inglés</h2>
+    <button class="mic-btn" id="btnEN">🎤 Mantener presionado para hablar</button>
+    <div class="box">
+      <span class="label">Texto original (EN)</span>
+      <div id="textEN">Esperando audio...</div>
+    </div>
+    <div class="box">
+      <span class="label">Traducción (ES)</span>
+      <div id="translatedES">—</div>
+    </div>
+    <div class="status" id="statusEN"></div>
+  </div>
+
+  <!-- Panel Español -->
+  <div class="panel spanish">
+    <h2>🇪🇸 Habla en Español</h2>
+    <button class="mic-btn" id="btnES">🎤 Mantener presionado para hablar</button>
+    <div class="box">
+      <span class="label">Texto original (ES)</span>
+      <div id="textES">Esperando audio...</div>
+    </div>
+    <div class="box">
+      <span class="label">Traducción (EN)</span>
+      <div id="translatedEN">—</div>
+    </div>
+    <div class="status" id="statusES"></div>
+  </div>
+</div>
+
+<p class="footer-note">AG Robotics · Prototipo MVP · Requiere Chrome/Edge en desktop o Android</p>
+
+<script>
+// ---------- Verificación de soporte ----------
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!SpeechRecognition) {
+  alert("Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.");
+}
+
+// ---------- Función de traducción (MyMemory API, gratuita, sin key) ----------
+async function traducir(texto, origen, destino) {
+  const url = https://api.mymemory.translated.net/get?q=${encodeURIComponent(texto)}&langpair=${origen}|${destino};
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    return data.responseData.translatedText;
+  } catch (err) {
+    console.error("Error de traducción:", err);
+    return "[Error al traducir]";
+  }
+}
+
+// ---------- Función de voz (Text-to-Speech) ----------
+function hablar(texto, lang) {
+  const utter = new SpeechSynthesisUtterance(texto);
+  utter.lang = lang;
+  utter.rate = 1;
+  speechSynthesis.speak(utter);
+}
+
+// ---------- Configurar un panel (EN o ES) ----------
+function configurarPanel(btnId, statusId, textOutId, translatedOutId, sttLang, targetLangCode, ttsTargetLang) {
+  const btn = document.getElementById(btnId);
+  const status = document.getElementById(statusId);
+  const textOut = document.getElementById(textOutId);
+  const translatedOut = document.getElementById(translatedOutId);
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = sttLang;
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  let listening = false;
+
+  btn.addEventListener('click', () => {
+    if (!listening) {
+      recognition.start();
+      listening = true;
+      btn.classList.add('listening');
+      btn.textContent = '🔴 Escuchando... (click para detener)';
+      status.textContent = 'Escuchando...';
+    } else {
+      recognition.stop();
+    }
+  });
+
+  recognition.onresult = async (event) => {
+    const transcript = event.results[0][0].transcript;
+    textOut.textContent = transcript;
+    status.textContent = 'Traduciendo...';
+
+    const traduccion = await traducir(transcript, targetLangCode.origen, targetLangCode.destino);
+    translatedOut.textContent = traduccion;
+    status.textContent = 'Reproduciendo traducción...';
+
+    hablar(traduccion, ttsTargetLang);
+
+    status.textContent = 'Listo. Presiona para hablar de nuevo.';
+  };
+
+  recognition.onend = () => {
+    listening = false;
+    btn.classList.remove('listening');
+    btn.textContent = '🎤 Mantener presionado para hablar';
+  };
+
+  recognition.onerror = (event) => {
+    status.textContent = 'Error: ' + event.error;
+    listening = false;
+    btn.classList.remove('listening');
+    btn.textContent = '🎤 Mantener presionado para hablar';
+  };
+}
+
+// ---------- Inicializar ambos paneles ----------
+// Panel Inglés: escucha en inglés, traduce a español, habla en español
+configurarPanel('btnEN', 'statusEN', 'textEN', 'translatedES', 'en-US', {origen: 'en', destino: 'es'}, 'es-ES');
+
+// Panel Español: escucha en español, traduce a inglés, habla en inglés
+configurarPanel('btnES', 'statusES', 'textES', 'translatedEN', 'es-ES', {origen: 'es', destino: 'en'}, 'en-US');
+</script>
+
+</body>
+</html>
