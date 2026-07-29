@@ -98,7 +98,7 @@
     font-size: 0.8rem;
   }
 
-  /* ==== Panel del Profesor de Ingles IA ==== */
+  /* ==== Panel Cortana by AG (Tutor Bilingue) ==== */
   .teacher-panel {
     max-width: 1100px;
     margin: 30px auto 0;
@@ -177,6 +177,7 @@
     display: flex;
     gap: 8px;
     align-items: center;
+    flex-wrap: wrap;
     font-size: 0.85rem;
     color: #94a3b8;
   }
@@ -186,6 +187,25 @@
     border: 1px solid #334155;
     border-radius: 6px;
     padding: 4px 8px;
+  }
+  .idioma-mic-toggle {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
+  }
+  .idioma-mic-toggle button {
+    background: #0f172a;
+    color: #94a3b8;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+  .idioma-mic-toggle button.activo {
+    background: #4ade80;
+    color: #0f172a;
+    border-color: #4ade80;
   }
 </style>
 </head>
@@ -227,18 +247,22 @@
 </div>
 
 <div class="teacher-panel">
-  <h2>🎓 Practica tu Inglés con IA</h2>
+  <h2>🤖 Cortana by AG — Tutor Bilingüe IA</h2>
   <div class="level-select">
-    <label>Nivel:</label>
+    <label>Nivel de inglés:</label>
     <select id="nivelIngles">
       <option value="principiante">Principiante</option>
       <option value="intermedio" selected>Intermedio</option>
       <option value="avanzado">Avanzado</option>
     </select>
+    <div class="idioma-mic-toggle">
+      <button type="button" id="micEspanol" class="activo">🎤 Español</button>
+      <button type="button" id="micIngles">🎤 English</button>
+    </div>
   </div>
   <div class="chat-window" id="chatWindow"></div>
   <div class="teacher-controls">
-    <input type="text" id="chatInput" placeholder="Escribe en inglés o presiona el micrófono...">
+    <input type="text" id="chatInput" placeholder="Pregunta o pide un tema en inglés o español...">
     <button class="mic" id="btnMicChat">🎤</button>
     <button id="btnEnviarChat">Enviar</button>
   </div>
@@ -326,8 +350,8 @@ function configurarPanel(btnId, statusId, textOutId, translatedOutId, sttLang, o
 configurarPanel('btnEN', 'statusEN', 'textEN', 'translatedES', 'en-US', 'en', 'es', 'es-ES');
 configurarPanel('btnES', 'statusES', 'textES', 'translatedEN', 'es-ES', 'es', 'en', 'en-US');
 
-// ===== PROFESOR DE INGLES IA =====
-var WORKER_URL = "https://TU-WORKER.tu-usuario.workers.dev"; // <-- reemplaza con tu URL del Worker
+// ===== CORTANA BY AG - TUTOR BILINGUE IA =====
+var WORKER_URL = "https://TU-WORKER.tu-usuario.workers.dev"; // <-- reemplaza con la URL real de tu Worker
 
 var chatWindow = document.getElementById('chatWindow');
 var chatInput = document.getElementById('chatInput');
@@ -335,8 +359,23 @@ var btnEnviarChat = document.getElementById('btnEnviarChat');
 var btnMicChat = document.getElementById('btnMicChat');
 var statusChat = document.getElementById('statusChat');
 var nivelSelect = document.getElementById('nivelIngles');
+var micEspanolBtn = document.getElementById('micEspanol');
+var micInglesBtn = document.getElementById('micIngles');
 
 var historialChat = [];
+var idiomaMicChat = 'es-ES'; // idioma actual del microfono del chat
+
+micEspanolBtn.addEventListener('click', function() {
+  idiomaMicChat = 'es-ES';
+  micEspanolBtn.classList.add('activo');
+  micInglesBtn.classList.remove('activo');
+});
+
+micInglesBtn.addEventListener('click', function() {
+  idiomaMicChat = 'en-US';
+  micInglesBtn.classList.add('activo');
+  micEspanolBtn.classList.remove('activo');
+});
 
 function agregarMensaje(texto, tipo) {
   var div = document.createElement('div');
@@ -347,13 +386,19 @@ function agregarMensaje(texto, tipo) {
 }
 
 function construirPrompt(nivel) {
-  return "You are a friendly, patient English teacher helping a Spanish-speaking mechatronics engineer practice conversational English. " +
-    "The student's level is: " + nivel + ". " +
-    "Rules: 1) Reply mostly in English, matching the student's level. " +
-    "2) If the student makes a grammar or vocabulary mistake, gently correct it and briefly explain the correction IN SPANISH in one short line. " +
-    "3) Keep replies short (2-4 sentences) so it feels like a real conversation. " +
-    "4) Ask a follow-up question to keep the conversation going. " +
-    "5) Topics can include robotics, engineering, business, or daily life since the student runs a robotics company.";
+  return "You are 'Cortana by AG', a bilingual AI tutor (English and Spanish) built by AG Robotics. " +
+    "The student's English level is: " + nivel + ". " +
+    "LANGUAGE RULES: " +
+    "1) Detect the language the student writes in. " +
+    "2) If they write in English, reply mainly in English (correct mistakes gently, with a short Spanish note if needed). " +
+    "3) If they write in Spanish, you may reply in Spanish OR bilingually, matching what they ask for. " +
+    "4) If the student explicitly asks 'answer in English', 'answer in Spanish', 'expl\u00edcamelo en espa\u00f1ol', 'in English please', etc., ALWAYS follow that instruction exactly, regardless of what language they wrote the question in. " +
+    "TEACHING RULES: " +
+    "5) The student can ask you to teach them ANY topic or skill (English grammar, engineering, robotics, SolidWorks, programming, business, math, etc.), not just English practice. " +
+    "6) When teaching a topic, explain it clearly and simply, use short examples, and check understanding with a follow-up question. " +
+    "7) When practicing conversational English specifically, keep replies short (2-4 sentences) so it feels natural, and correct grammar/vocabulary mistakes gently. " +
+    "8) The student is a mechatronics engineer who runs a robotics company (AG Robotics), so feel free to use robotics/engineering examples when relevant. " +
+    "9) Always be patient, encouraging, and clear.";
 }
 
 function enviarMensajeIA(texto) {
@@ -372,22 +417,28 @@ function enviarMensajeIA(texto) {
   })
   .then(function(res) { return res.json(); })
   .then(function(data) {
-    var respuesta = data.reply || data.text || data.content || "Sorry, I couldn't respond.";
+    var respuesta = data.reply || "Sorry, I couldn't respond.";
     agregarMensaje(respuesta, 'ai');
     historialChat.push({ role: "assistant", content: respuesta });
     statusChat.textContent = '';
-    hablarIngles(respuesta);
+    hablarRespuesta(respuesta);
   })
   .catch(function(err) {
     console.error(err);
-    statusChat.textContent = 'Error al conectar con el profesor IA.';
+    statusChat.textContent = 'Error al conectar con Cortana by AG.';
   });
 }
 
-function hablarIngles(texto) {
-  var textoLimpio = texto.replace(/\(.*?\)/g, ''); // quita explicaciones en espanol entre parentesis si las hay
+function detectarIdioma(texto) {
+  var patronEspanol = /[áéíóúñ¿¡]| el | la | de | que | es | para | como | qué /i;
+  return patronEspanol.test(texto) ? 'es-ES' : 'en-US';
+}
+
+function hablarRespuesta(texto) {
+  var textoLimpio = texto.replace(/\(.*?\)/g, '');
+  var idioma = detectarIdioma(textoLimpio);
   var utter = new SpeechSynthesisUtterance(textoLimpio);
-  utter.lang = 'en-US';
+  utter.lang = idioma;
   utter.rate = 0.95;
   speechSynthesis.speak(utter);
 }
@@ -404,44 +455,43 @@ chatInput.addEventListener('keypress', function(e) {
   }
 });
 
-// Microfono para el chat (usa el mismo SpeechRecognition ya declarado arriba)
+// Microfono para el chat (usa el idioma seleccionado con los botones Español/English)
 if (SpeechRecognition) {
-  var recognitionChat = new SpeechRecognition();
-  recognitionChat.lang = 'en-US';
-  recognitionChat.continuous = false;
-  recognitionChat.interimResults = false;
   var listeningChat = false;
 
   btnMicChat.addEventListener('click', function() {
     if (!listeningChat) {
+      var recognitionChat = new SpeechRecognition();
+      recognitionChat.lang = idiomaMicChat;
+      recognitionChat.continuous = false;
+      recognitionChat.interimResults = false;
+
+      recognitionChat.onresult = function(event) {
+        var transcript = event.results[0][0].transcript;
+        enviarMensajeIA(transcript);
+      };
+
+      recognitionChat.onend = function() {
+        listeningChat = false;
+        btnMicChat.classList.remove('listening');
+      };
+
+      recognitionChat.onerror = function(event) {
+        statusChat.textContent = 'Error: ' + event.error;
+        listeningChat = false;
+        btnMicChat.classList.remove('listening');
+      };
+
       recognitionChat.start();
       listeningChat = true;
       btnMicChat.classList.add('listening');
-      statusChat.textContent = 'Escuchando...';
-    } else {
-      recognitionChat.stop();
+      statusChat.textContent = 'Escuchando (' + (idiomaMicChat === 'es-ES' ? 'Español' : 'English') + ')...';
     }
   });
-
-  recognitionChat.onresult = function(event) {
-    var transcript = event.results[0][0].transcript;
-    enviarMensajeIA(transcript);
-  };
-
-  recognitionChat.onend = function() {
-    listeningChat = false;
-    btnMicChat.classList.remove('listening');
-  };
-
-  recognitionChat.onerror = function(event) {
-    statusChat.textContent = 'Error: ' + event.error;
-    listeningChat = false;
-    btnMicChat.classList.remove('listening');
-  };
 }
 
 // Mensaje de bienvenida
-agregarMensaje("Hi! I'm your English practice assistant. Tell me about your day, or ask me anything. Let's start! 😊", 'ai');
+agregarMensaje("Hi! I'm Cortana by AG 🤖. Ask me anything in English or Spanish — practice conversation, or ask me to teach you any topic or skill. / Puedes preguntarme en inglés o español — practicar conversación, o pedirme que te enseñe cualquier tema o habilidad.", 'ai');
 </script>
 
 </body>
